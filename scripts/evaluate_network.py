@@ -238,10 +238,10 @@ def evaluate_torch(model,
                 inputs = (torch.from_numpy(frames[0]['pos0'][0]).to(device),
                           torch.from_numpy(frames[0]['vel0'][0]).to(device),
                           None, box, box_normals)
-                pr_pos1, pr_vel1, _ = model(inputs)
+                pr_pos1, pr_vel1 = model(inputs)  # el modelo devuelve (pos, vel)
 
                 inputs = (pr_pos1, pr_vel1, None, box, box_normals)
-                pr_pos2, pr_vel2, _ = model(inputs)
+                pr_pos2, pr_vel2 = model(inputs)
 
                 #MSE
                 fluid_errors.add_errors(scene_id, frame0_id, frame1_id,
