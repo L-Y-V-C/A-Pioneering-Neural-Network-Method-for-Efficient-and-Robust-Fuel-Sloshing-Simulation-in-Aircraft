@@ -149,7 +149,8 @@ def getProcessName(pid):
 
 if not find_library('nvidia-ml') is None:
 
-    nvml = CDLL('libnvidia-ml.so')
+    # En contenedores (RunPod) solo existe libnvidia-ml.so.1; find_library devuelve el nombre real
+    nvml = CDLL(find_library('nvidia-ml'))
     atexit.register(nvmlShutdown)
     nvmlInit()
     HAVE_NVML = True
