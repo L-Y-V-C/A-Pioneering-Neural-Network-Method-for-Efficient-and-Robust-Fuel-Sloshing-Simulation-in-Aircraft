@@ -10,7 +10,11 @@ import importlib
 import yaml
 from pyemd import emd
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from datasets.dataset_reader_physics_random_gravity import read_data_val
+try:
+    from datasets.dataset_reader_physics_random_gravity import read_data_val
+except ImportError:
+    # El reader "random_gravity" (Fueltank) no está en el repo; para los datos de DeepLagrangianFluids usamos el original
+    from datasets.dataset_reader_physics import read_data_val
 from fluid_evaluation_helper import FluidErrors
 from scipy.stats import wasserstein_distance
 import torch
