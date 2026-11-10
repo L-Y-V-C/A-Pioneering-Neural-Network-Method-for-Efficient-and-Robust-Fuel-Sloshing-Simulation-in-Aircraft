@@ -28,6 +28,9 @@ def main():
     p.add_argument('--scene', default='sim_0201')
     p.add_argument('--frames', type=int, default=100, help='número de pasos a simular')
     p.add_argument('--out', required=True)
+    p.add_argument('--one_step', action='store_true',
+                   help='predicción a 1 paso ("teacher forcing"): en cada frame se usa el estado GT como entrada; '
+                        'NO es una simulación, sirve para visualizar el error local del modelo')
     args = p.parse_args()
 
     device = torch.device('cuda')
@@ -46,6 +49,9 @@ def main():
     times = []
     with torch.no_grad():
         for t in range(len(scene['pos']) - 1):
+            if args.one_step:
+                pos = torch.from_numpy(scene['pos'][t]).to(device)
+                vel = torch.from_numpy(scene['vel'][t]).to(device)
             torch.cuda.synchronize()
             t0 = time.perf_counter()
             pos, vel = model((pos, vel, None, box, box_normals))
@@ -60,6 +66,7 @@ def main():
     m = rollout_metrics(pred, scene['pos'])
     m.update({
         'model': 'DualFluidNet', 'ckpt': args.ckpt, 'scene': args.scene,
+        'mode': 'one_step (teacher forcing)' if args.one_step else 'rollout',
         'particles': int(pred.shape[1]),
         # se descarta el primer paso (calentamiento de CUDA)
         'inference_ms': float(times[1:].mean() * 1000) if len(times) > 1 else float(times.mean() * 1000),

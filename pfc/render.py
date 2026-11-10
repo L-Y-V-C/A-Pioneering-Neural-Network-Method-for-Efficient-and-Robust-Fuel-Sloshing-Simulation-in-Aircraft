@@ -29,6 +29,9 @@ def main():
     p.add_argument('--max_frames', type=int, default=100)
     p.add_argument('--fps', type=int, default=12)
     p.add_argument('--point_size', type=float, default=2.0)
+    p.add_argument('--color_error', type=float, default=None, metavar='MAX_MM',
+                   help='colorear las predicciones por error al GT (mm), escala 0..MAX_MM; el GT sigue coloreado por altura')
+    p.add_argument('--title', default='', help='texto adicional en el título de cada frame')
     args = p.parse_args()
     assert len(args.inputs) == len(args.labels)
 
@@ -52,16 +55,27 @@ def main():
             ax = fig.add_subplot(1, len(seqs), i + 1, projection='3d')
             pts = seq[t]
             # en los datos de DeepLagrangianFluids la gravedad va en -y: se dibuja y como eje vertical
-            ax.scatter(pts[:, 0], pts[:, 2], pts[:, 1], s=args.point_size, c=pts[:, 1],
-                       cmap='viridis', vmin=zlo, vmax=zhi, linewidths=0, depthshade=False)
+            if args.color_error is not None and i > 0:
+                err = np.linalg.norm(pts - gt[t], axis=-1) * 1000.0
+                sc = ax.scatter(pts[:, 0], pts[:, 2], pts[:, 1], s=args.point_size, c=err, cmap='inferno_r',
+                                vmin=0, vmax=args.color_error, linewidths=0, depthshade=False)
+                label_t = '%s\nerror medio %.1f mm' % (label, err.mean())
+            else:
+                sc = ax.scatter(pts[:, 0], pts[:, 2], pts[:, 1], s=args.point_size, c=pts[:, 1],
+                                cmap='viridis', vmin=zlo, vmax=zhi, linewidths=0, depthshade=False)
+                label_t = label
             # partículas fuera del rango del GT (p.ej. si el modelo diverge) se recortan visualmente
             ax.set_clip_on(True)
             ax.set_xlim(lo[0], hi[0]); ax.set_ylim(lo[2], hi[2]); ax.set_zlim(lo[1], hi[1])
             ax.set_box_aspect((hi[0] - lo[0], hi[2] - lo[2], hi[1] - lo[1]))
             ax.view_init(elev=20, azim=-60)
             ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
-            ax.set_title(label, fontsize=12)
-        fig.suptitle('frame %d  (t = %.2f s)' % (t, t * 0.02), fontsize=11, y=0.995)
+            ax.set_title(label_t, fontsize=12)
+            if args.color_error is not None and i == len(seqs) - 1:
+                cb = fig.colorbar(sc, ax=ax, shrink=0.55, pad=0.08)
+                cb.set_label('error (mm)')
+        fig.suptitle('frame %d  (t = %.2f s)%s' % (t, t * 0.02, ('  —  ' + args.title) if args.title else ''),
+                     fontsize=11, y=0.995)
         fig.tight_layout(rect=(0, 0, 1, 0.95))
         path = os.path.join(args.out_dir, 'frame_%04d.png' % t)
         fig.savefig(path)
