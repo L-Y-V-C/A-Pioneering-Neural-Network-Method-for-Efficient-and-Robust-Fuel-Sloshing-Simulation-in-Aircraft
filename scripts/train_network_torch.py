@@ -8,7 +8,11 @@ import argparse
 import yaml
 from torch.backends import cudnn
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from datasets.dataset_reader_physics_random_gravity import read_data_train, read_data_val
+try:
+    from datasets.dataset_reader_physics_random_gravity import read_data_train, read_data_val
+except ImportError:
+    # El reader "random_gravity" (Fueltank) no está en el repo; para los datos de DeepLagrangianFluids usamos el original
+    from datasets.dataset_reader_physics import read_data_train, read_data_val
 from collections import namedtuple
 import glob
 import time
@@ -22,6 +26,7 @@ TrainParams = namedtuple('TrainParams', ['max_iter', 'base_lr', 'batch_size'])
 train_params = TrainParams(60 * _k, 0.001, 2)
 # min_err = 0.00050
 # min_err_seq = 0.0306
+min_err = float('inf')  # mejor err_n1 visto hasta ahora (sin esto: NameError en la primera evaluación)
 def create_model(**kwargs):
     from models.default_torch import MyParticleNetwork
     """Returns an instance of the network for training and evaluation"""
@@ -35,10 +40,15 @@ def main():
     parser.add_argument(  "cfg",
                         type=str,
                         help="The path to the yaml config file")
+    parser.add_argument("--max_iter", type=int, default=None,
+                        help="Override de max_iter (p.ej. corrida corta para medir tiempos)")
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     args = parser.parse_args()
+    global train_params
+    if args.max_iter is not None:
+        train_params = train_params._replace(max_iter=args.max_iter)
 
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)

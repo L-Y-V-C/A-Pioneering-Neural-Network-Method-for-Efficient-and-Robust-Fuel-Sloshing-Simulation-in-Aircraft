@@ -10,7 +10,11 @@ import importlib
 import yaml
 from pyemd import emd
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from datasets.dataset_reader_physics_random_gravity import read_data_val
+try:
+    from datasets.dataset_reader_physics_random_gravity import read_data_val
+except ImportError:
+    # El reader "random_gravity" (Fueltank) no está en el repo; para los datos de DeepLagrangianFluids usamos el original
+    from datasets.dataset_reader_physics import read_data_val
 from fluid_evaluation_helper import FluidErrors
 from scipy.stats import wasserstein_distance
 import torch
@@ -234,10 +238,10 @@ def evaluate_torch(model,
                 inputs = (torch.from_numpy(frames[0]['pos0'][0]).to(device),
                           torch.from_numpy(frames[0]['vel0'][0]).to(device),
                           None, box, box_normals)
-                pr_pos1, pr_vel1, _ = model(inputs)
+                pr_pos1, pr_vel1 = model(inputs)  # el modelo devuelve (pos, vel)
 
                 inputs = (pr_pos1, pr_vel1, None, box, box_normals)
-                pr_pos2, pr_vel2, _ = model(inputs)
+                pr_pos2, pr_vel2 = model(inputs)
 
                 #MSE
                 fluid_errors.add_errors(scene_id, frame0_id, frame1_id,

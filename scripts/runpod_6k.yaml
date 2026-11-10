@@ -1,0 +1,5 @@
+# Config para RunPod: dataset "6k box data" de DeepLagrangianFluids (= "Liquid(6k)" de la Table 2 de DualFluidNet).
+# Igual a default.yaml salvo la ruta del dataset.
+dataset_dir: "/workspace/datasets/ours_6k_box_data" # path to the dataset directory with 'train' and 'valid' subdirs.
+train_data:
+  random_rotation: true # randomly rotate training data about the gravity axis.
