@@ -32,6 +32,8 @@ def main():
     p.add_argument('--color_error', type=float, default=None, metavar='MAX_MM',
                    help='colorear las predicciones por error al GT (mm), escala 0..MAX_MM; el GT sigue coloreado por altura')
     p.add_argument('--title', default='', help='texto adicional en el título de cada frame')
+    p.add_argument('--frame_offset', type=int, default=0,
+                   help='frame real del primer cuadro (si el rollout empezó en --start_frame), solo para el título')
     args = p.parse_args()
     assert len(args.inputs) == len(args.labels)
 
@@ -74,7 +76,8 @@ def main():
             if args.color_error is not None and i == len(seqs) - 1:
                 cb = fig.colorbar(sc, ax=ax, shrink=0.55, pad=0.08)
                 cb.set_label('error (mm)')
-        fig.suptitle('frame %d  (t = %.2f s)%s' % (t, t * 0.02, ('  —  ' + args.title) if args.title else ''),
+        tf = t + args.frame_offset
+        fig.suptitle('frame %d  (t = %.2f s)%s' % (tf, tf * 0.02,('  —  ' + args.title) if args.title else ''),
                      fontsize=11, y=0.995)
         fig.tight_layout(rect=(0, 0, 1, 0.95))
         path = os.path.join(args.out_dir, 'frame_%04d.png' % t)

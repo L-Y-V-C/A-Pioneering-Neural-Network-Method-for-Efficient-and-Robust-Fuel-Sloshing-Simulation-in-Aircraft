@@ -31,14 +31,22 @@ def main():
     p.add_argument('--one_step', action='store_true',
                    help='predicción a 1 paso ("teacher forcing"): en cada frame se usa el estado GT como entrada; '
                         'NO es una simulación, sirve para visualizar el error local del modelo')
+    p.add_argument('--start_frame', type=int, default=0,
+                   help='frame del GT desde el que arranca el rollout (estado real en ese frame)')
+    p.add_argument('--bn_train', action='store_true',
+                   help='BatchNorm en modo train (normaliza con las estadísticas de cada escena), igual que la '
+                        'evaluación interna de scripts/train_network_torch.py, que nunca llama model.eval()')
     args = p.parse_args()
 
     device = torch.device('cuda')
-    scene = load_scene(args.data_dir, args.scene, max_frames=args.frames + 1)
+    scene = load_scene(args.data_dir, args.scene, max_frames=args.start_frame + args.frames + 1)
+    if args.start_frame:
+        scene['pos'] = scene['pos'][args.start_frame:]
+        scene['vel'] = scene['vel'][args.start_frame:]
     model = MyParticleNetwork().to(device)
     state = torch.load(args.ckpt, map_location=device)
     model.load_state_dict(state['model'] if 'model' in state else state)
-    model.eval()
+    model.train() if args.bn_train else model.eval()
 
     box = torch.from_numpy(scene['box']).to(device)
     box_normals = torch.from_numpy(scene['box_normals']).to(device)
@@ -67,6 +75,8 @@ def main():
     m.update({
         'model': 'DualFluidNet', 'ckpt': args.ckpt, 'scene': args.scene,
         'mode': 'one_step (teacher forcing)' if args.one_step else 'rollout',
+        'bn_mode': 'train' if args.bn_train else 'eval',
+        'start_frame': args.start_frame,
         'particles': int(pred.shape[1]),
         # se descarta el primer paso (calentamiento de CUDA)
         'inference_ms': float(times[1:].mean() * 1000) if len(times) > 1 else float(times.mean() * 1000),

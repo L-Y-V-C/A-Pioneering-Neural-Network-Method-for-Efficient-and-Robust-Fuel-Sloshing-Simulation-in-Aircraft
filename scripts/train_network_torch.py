@@ -42,6 +42,9 @@ def main():
                         help="The path to the yaml config file")
     parser.add_argument("--max_iter", type=int, default=None,
                         help="Override de max_iter (p.ej. corrida corta para medir tiempos)")
+    parser.add_argument("--batch_size", type=int, default=None,
+                        help="Override de batch_size (código: 2; paper: 16). Al retomar desde un checkpoint, "
+                             "el lr sigue el calendario original (se restauran optimizer y scheduler)")
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -49,6 +52,9 @@ def main():
     global train_params
     if args.max_iter is not None:
         train_params = train_params._replace(max_iter=args.max_iter)
+    if args.batch_size is not None:
+        train_params = train_params._replace(batch_size=args.batch_size)
+    print('train_params:', train_params, flush=True)
 
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)

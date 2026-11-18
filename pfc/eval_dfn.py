@@ -27,13 +27,15 @@ def main():
     p.add_argument('--data_dir', required=True, help='carpeta con valid/')
     p.add_argument('--frame_skip', type=int, default=20, help='igual que en train_network_torch.py')
     p.add_argument('--out', required=True)
+    p.add_argument('--bn_train', action='store_true',
+                   help='BatchNorm en modo train, igual que la evaluación interna de train_network_torch.py')
     args = p.parse_args()
 
     device = torch.device('cuda')
     model = MyParticleNetwork().to(device)
     state = torch.load(args.ckpt, map_location=device)
     model.load_state_dict(state['model'] if 'model' in state else state)
-    model.eval()
+    model.train() if args.bn_train else model.eval()
 
     files = sorted(glob.glob(os.path.join(args.data_dir, 'valid', '*.zst')))
     ds = read_data_val(files=files, window=1, cache_data=True)
@@ -42,7 +44,7 @@ def main():
         res = evaluate_torch(model, ds, frame_skip=args.frame_skip, device=device)
     res = {k: (None if v != v else float(v)) for k, v in res.items()}  # nan -> None
     res.update({'err_n1_mm': res['err_n1'] * 1000, 'err_n2_mm': res['err_n2'] * 1000,
-                'ckpt': args.ckpt, 'eval_seconds': time.time() - t0, 'valid_files': len(files)})
+                'ckpt': args.ckpt, 'bn_mode': 'train' if args.bn_train else 'eval', 'eval_seconds': time.time() - t0, 'valid_files': len(files)})
     with open(args.out, 'w') as f:
         json.dump(res, f, indent=1)
     print(json.dumps(res, indent=1))
